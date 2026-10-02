@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f5132">
+<meta name="description" content="Mangroovy walk — School Monitoring & Rewards environmental monitoring project.">
+<title>Mangroovy walk — School Monitoring & Rewards</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+:root{
+  --green:#0f5132;
+  --green2:#176b43;
+  --green3:#2d8a5c;
+  --light:#edf7f0;
+  --lighter:#f7fbf8;
+  --border:#d5e4da;
+  --text:#183027;
+  --muted:#62756b;
+  --danger:#a62929;
+  --warning:#8a5b00;
+  --shadow:0 10px 30px rgba(15,81,50,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--text);
+  background:var(--lighter);
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a{color:var(--green);font-weight:700}
+.hidden{display:none!important}
+#app{min-height:100vh}
+
+/* Security gate */
+#securityGate{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;background:linear-gradient(135deg,#082e1d,#0f5132 55%,#dcefe3);
+}
+.auth-card{
+  width:min(500px,100%);background:#fff;border:1px solid #dbe8df;
+  border-radius:22px;box-shadow:0 25px 70px rgba(0,0,0,.20);padding:28px;
+}
+.auth-card h1{margin:0 0 8px;color:var(--green);font-size:clamp(1.45rem,5vw,2rem)}
+.auth-card p{color:var(--muted);line-height:1.55}
+.step-label{font-weight:800;color:var(--green);margin:22px 0 10px}
+.field{margin:12px 0}
+.field label{display:block;font-weight:700;margin-bottom:7px}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:11px;
+  background:#fff;color:var(--text);outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--green3);box-shadow:0 0 0 3px rgba(45,138,92,.12)
+}
+textarea{min-height:110px;resize:vertical}
+.btn{
+  border:0;border-radius:11px;padding:11px 15px;font-weight:800;
+  background:var(--green);color:#fff;transition:.15s ease;
+}
+.btn:hover{filter:brightness(1.05)}
+.btn.secondary{background:#e6f1ea;color:var(--green)}
+.btn.danger{background:var(--danger)}
+.btn.warning{background:#b77900}
+.btn.outline{background:#fff;color:var(--green);border:1px solid var(--green)}
+.btn.small{padding:8px 10px;font-size:.88rem}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.role-btn{
+  min-height:56px;border:1px solid var(--border);background:var(--light);
+  color:var(--green);border-radius:12px;font-weight:900;
+}
+.role-btn.active{background:var(--green);color:#fff}
+.auth-message{min-height:22px;margin-top:10px;font-weight:700;color:var(--danger)}
+.auth-note{font-size:.85rem;background:#f1f6f2;border-left:4px solid var(--green3);padding:10px 12px;border-radius:8px}
+
+/* App */
+.app-shell{min-height:100vh}
+.topbar{
+  position:sticky;top:0;z-index:1000;background:#fff;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;padding:11px 14px;
+}
+.brand{font-weight:950;color:var(--green);line-height:1.05}
+.brand small{display:block;color:var(--muted);font-size:.72rem;font-weight:700;margin-top:3px}
+.menu-btn{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;
+  border:1px solid var(--border);background:#fff;border-radius:10px;color:var(--green);font-size:1.25rem}
+.user-chip{margin-left:auto;font-size:.82rem;font-weight:800;color:var(--green);background:var(--light);padding:8px 10px;border-radius:999px}
+.sidebar{
+  position:fixed;z-index:1200;top:0;bottom:0;left:0;width:285px;background:#fff;
+  border-right:1px solid var(--border);box-shadow:10px 0 30px rgba(0,0,0,.08);
+  padding:18px;transform:translateX(-105%);transition:transform .2s ease;overflow:auto;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar .close{float:right}
+.nav{display:grid;gap:6px;clear:both;padding-top:20px}
+.owner-nav-only{display:none}.owner-nav-only.visible{display:block}
+.nav button{
+  text-align:left;border:0;background:#fff;color:var(--text);padding:12px;border-radius:10px;font-weight:800;
+}
+.nav button:hover,.nav button.active{background:var(--light);color:var(--green)}
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1100;display:none;
+}
+.overlay.show{display:block}
+main{padding:18px;max-width:1300px;margin:auto}
+.section{display:none}
+.section.active{display:block}
+.hero{
+  background:linear-gradient(135deg,#e8f6ed,#fff);
+  border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:var(--shadow);
+}
+.hero h1{margin:0 0 10px;color:var(--green);font-size:clamp(1.55rem,5vw,2.4rem)}
+.hero p{max-width:850px;line-height:1.65}
+.tagline{font-size:1.05rem;font-weight:900;color:var(--green2);border-left:4px solid var(--green3);padding-left:12px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:16px}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:17px;box-shadow:var(--shadow)}
+.span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}.span-3{grid-column:span 3}
+.card h2,.card h3{margin-top:0;color:var(--green)}
+.kpi{font-size:1.8rem;font-weight:950;color:var(--green)}
+.muted{color:var(--muted)}
+.info-list{margin:0;padding-left:18px;line-height:1.75}
+.status{
+  display:inline-block;padding:5px 8px;border-radius:999px;background:#eaf4ee;
+  color:var(--green);font-size:.78rem;font-weight:900;
+}
+.status.bad{background:#fff0f0;color:var(--danger)}
+.status.warn{background:#fff6df;color:var(--warning)}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.full{grid-column:1/-1}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#map{height:430px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
+.evidence-card{display:grid;grid-template-columns:180px 1fr;gap:15px}
+.media-preview{width:100%;height:150px;border-radius:10px;background:#eef4ef;object-fit:cover;border:1px solid var(--border)}
+.evidence-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 15px;font-size:.9rem}
+.evidence-meta strong{color:var(--green)}
+.admin-only{border-left:4px solid var(--green3)}
+.dashboard-role{font-size:.8rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--green);background:#f4faf6}
+.notice{padding:12px;border-radius:10px;background:#f0f6f2;border:1px solid var(--border);line-height:1.5}
+.danger-note{background:#fff2f2;border-color:#efcaca}
+footer{padding:30px 18px;text-align:center;color:var(--muted);font-size:.85rem}
+.certificate-box{background:#f4fbf6;border:1px solid #b8d7c4;border-radius:14px;padding:16px}
+.points-line{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px}
+@media(max-width:850px){
+  .span-8,.span-6,.span-4,.span-3{grid-column:span 12}
+  .form-grid{grid-template-columns:1fr}
+  .evidence-card{grid-template-columns:1fr}
+  .media-preview{height:210px}
+}
+@media(min-width:851px){
+  .topbar{padding-left:24px;padding-right:24px}
+  main{padding:24px}
+}
+
+.topbar{padding:0;background:#fff}
+.topbar-inner{
+  width:100%;max-width:1380px;margin:auto;min-height:70px;
+  display:flex;align-items:center;gap:14px;padding:10px 18px;
+}
+.brand{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.brand-title{font-size:1.05rem;font-weight:950;color:var(--green);letter-spacing:.01em;white-space:nowrap}
+.brand small{margin-top:3px;line-height:1.1}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
+.user-chip{white-space:nowrap}
+.hero{position:relative;overflow:hidden}
+.hero-content{position:relative;z-index:2;max-width:720px}
+.hero-visual{
+  margin-top:18px;min-height:220px;border-radius:16px;overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(7,46,29,.82),rgba(7,46,29,.22)),
+    url('https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1400&q=85') center/cover no-repeat;
+  display:flex;align-items:flex-end;padding:20px;color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.hero-visual h2{margin:0;color:#fff;font-size:clamp(1.15rem,3vw,1.6rem)}
+.hero-visual p{margin:7px 0 0;max-width:650px;color:#f4fff7}
+.map-shell{position:relative}
+.org-card .btn{margin-top:6px;margin-right:6px}.org-card h2{margin-bottom:8px}.map-caption{
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:10px 12px;background:#f2f8f4;border:1px solid var(--border);
+  border-radius:10px;margin-top:10px;font-size:.88rem;
+}
+@media(max-width:600px){
+  .topbar-inner{min-height:64px;padding:8px 10px}
+  .brand-title{font-size:.94rem}
+  .brand small{font-size:.65rem}
+  .user-chip{display:none}
+  .topbar-actions{gap:5px}
+  .topbar-actions .btn{padding:9px 10px;font-size:.75rem}
+  .hero{padding:18px}
+  .hero-visual{min-height:190px;padding:16px}
+}
+
+
+/* Reference-inspired field workflow */
+.field-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+@media(max-width:620px){.field-actions{grid-template-columns:1fr}}
+.capture-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px}
+.capture-preview img,.capture-preview video{width:100%;max-height:260px;object-fit:cover;border-radius:14px;border:1px solid var(--border,#dbe7df)}
+.location-picker{height:330px;border-radius:16px;overflow:hidden;border:1px solid var(--border,#dbe7df);margin-top:12px}
+.coord-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:620px){.coord-grid{grid-template-columns:1fr}}
+.profile-grid,.log-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.profile-grid,.log-grid{grid-template-columns:1fr}}
+.visit-card,.profile-card,.finding-card{border:1px solid var(--border,#dbe7df);border-radius:14px;padding:14px;background:#fff;margin-top:10px}
+.dark .visit-card,.dark .profile-card,.dark .finding-card{background:#102018}
+.status-pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:700;background:#e8f5ec;color:#166534}
+.camera-note{font-size:.86rem;color:var(--muted,#64748b);margin-top:7px}
+
+
+/* Real map presentation */
+#leafletMap{
+  width:100%;
+  height:520px !important;
+  min-height:520px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid #cfded4;
+  background:#dbe8df;
+  position:relative;
+  z-index:1;
+}
+.leaflet-container{font-family:inherit;font-size:14px}
+.leaflet-control-attribution{font-size:10px}
+.map-caption{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f5faf7;
+  border:1px solid #d9e8de;
+  font-size:.85rem;
+}
+.map-caption span{display:inline-flex;align-items:center}
+.map-caption strong{margin-right:4px}
+.map-real-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.map-real-title h1{margin-bottom:4px}
+.map-tools{display:flex;gap:8px;flex-wrap:wrap}
+.map-tools .btn{margin:0}
+
+
+/* =========================
+   MANGROVE WATCH 3D UI/UX
+   ========================= */
+:root{
+  --green:#075b3a;
+  --green2:#0d7a4d;
+  --green3:#32b66e;
+  --deep:#043b29;
+  --mint:#e9fff2;
+  --glass:rgba(255,255,255,.72);
+  --glass-dark:rgba(4,59,41,.88);
+  --border:rgba(255,255,255,.52);
+  --shadow3d:0 18px 45px rgba(4,59,41,.18),0 4px 12px rgba(4,59,41,.10);
+}
+html,body{min-height:100%;}
+body{
+  background:
+    radial-gradient(circle at 8% 12%,rgba(67,180,110,.18),transparent 27%),
+    radial-gradient(circle at 92% 20%,rgba(55,173,207,.12),transparent 24%),
+    linear-gradient(145deg,#e9f8ef 0%,#f6fbf8 46%,#dff1e8 100%);
+  background-attachment:fixed;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:linear-gradient(120deg,rgba(255,255,255,.18),transparent 42%,rgba(0,75,48,.05));
+}
+
+/* top glass header */
+.topbar{
+  position:sticky;top:12px;z-index:1000;background:transparent;border:0;
+  padding:0 14px;filter:drop-shadow(0 15px 24px rgba(3,63,42,.16));
+}
+.topbar-inner{
+  min-height:72px;padding:11px 16px;border-radius:24px;
+  background:linear-gradient(135deg,rgba(4,74,48,.96),rgba(8,108,68,.91));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -10px 24px rgba(0,0,0,.08),0 15px 35px rgba(3,70,45,.22);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.menu-btn{
+  width:46px;height:46px;border:1px solid rgba(255,255,255,.2);border-radius:15px;
+  background:linear-gradient(145deg,#138657,#075b3a);color:#fff;
+  box-shadow:inset 2px 2px 4px rgba(255,255,255,.18),inset -3px -3px 7px rgba(0,0,0,.2),0 8px 16px rgba(0,0,0,.18);
+  font-weight:900;font-size:.72rem;
+}
+.brand-title{color:#fff!important;font-size:1.18rem;letter-spacing:.015em;text-shadow:0 2px 12px rgba(0,0,0,.22)}
+.brand small{color:rgba(255,255,255,.76)!important}
+.user-chip{
+  color:#fff!important;background:rgba(255,255,255,.12)!important;
+  border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+}
+.topbar-actions .btn{background:linear-gradient(145deg,#f3fff7,#d2f1df);color:#075b3a;border:1px solid rgba(255,255,255,.4);box-shadow:0 6px 14px rgba(0,0,0,.15),inset 0 1px 0 #fff}
+
+/* 3D slide-out navigation */
+.sidebar{
+  width:300px;padding:18px;background:linear-gradient(180deg,rgba(3,67,44,.98),rgba(2,48,34,.97));
+  border:1px solid rgba(255,255,255,.14);border-left:0;border-radius:0 28px 28px 0;
+  box-shadow:25px 0 55px rgba(0,0,0,.25),inset -1px 0 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+}
+.sidebar .close{float:right;background:linear-gradient(145deg,#29a86b,#075b3a);color:#fff;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 16px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.2)}
+.nav{gap:8px;padding-top:24px}
+.nav button{
+  color:#effff6;background:rgba(255,255,255,.055);border:1px solid transparent;border-radius:15px;
+  padding:14px 15px;font-weight:850;letter-spacing:.01em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:.18s ease;transform:translateZ(0);
+}
+.nav button:hover,.nav button.active{
+  color:#073e2a;background:linear-gradient(145deg,#dffff0,#b9efd2);border-color:rgba(255,255,255,.38);
+  box-shadow:8px 10px 20px rgba(0,0,0,.2),inset 1px 1px 3px rgba(255,255,255,.85),inset -3px -3px 8px rgba(7,91,58,.13);
+  transform:translateX(3px);
+}
+.overlay{background:rgba(0,25,17,.52);backdrop-filter:blur(4px)}
+
+/* content stage */
+main{max-width:1440px;padding:22px}
+.section{animation:section3d .32s ease both}
+@keyframes section3d{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+.card,.hero{
+  background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(238,250,243,.66));
+  border:1px solid rgba(255,255,255,.78);border-radius:24px;
+  box-shadow:var(--shadow3d),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(16,91,60,.06);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.card{padding:20px;position:relative;overflow:hidden}
+.card:after,.hero:after{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(120deg,rgba(255,255,255,.22),transparent 35%,rgba(19,120,77,.04));
+}
+.card>* , .hero>*{position:relative;z-index:1}
+.card:hover{transform:translateY(-2px);box-shadow:0 23px 48px rgba(4,59,41,.2),0 5px 12px rgba(4,59,41,.08);transition:.2s ease}
+.card h2,.card h3{color:var(--green)}
+.kpi{font-size:2.25rem;text-shadow:0 4px 15px rgba(7,91,58,.15)}
+
+/* hero / home */
+.hero{
+  padding:0;min-height:300px;overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(2,57,38,.94) 0%,rgba(3,80,53,.78) 43%,rgba(2,55,39,.20) 100%),
+    url('https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1800&q=88') center/cover no-repeat;
+  color:#fff;box-shadow:0 25px 60px rgba(2,64,42,.24),inset 0 1px 0 rgba(255,255,255,.28);
+}
+.hero-content{padding:30px 34px;max-width:760px}
+.hero .dashboard-role{color:rgba(255,255,255,.72)}
+.hero h1{color:#fff;font-size:clamp(1.7rem,4vw,3rem);text-shadow:0 4px 20px rgba(0,0,0,.22)}
+.hero p{color:rgba(255,255,255,.92);line-height:1.7}
+.hero .tagline{color:#fff;border-left-color:#52df93;background:rgba(0,0,0,.14);padding:10px 13px;border-radius:12px;display:inline-block}
+.hero-visual{display:none}
+
+/* Buttons become tactile 3D controls */
+.btn{
+  background:linear-gradient(145deg,#15905a,#075b3a);border:1px solid rgba(255,255,255,.22);border-radius:14px;
+  box-shadow:0 9px 16px rgba(4,73,48,.22),inset 1px 1px 3px rgba(255,255,255,.22),inset -3px -4px 8px rgba(0,0,0,.12);
+  transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;
+}
+.btn:hover{filter:none;transform:translateY(-2px);box-shadow:0 13px 21px rgba(4,73,48,.25),inset 1px 1px 3px rgba(255,255,255,.28)}
+.btn:active{transform:translateY(1px);box-shadow:0 4px 8px rgba(4,73,48,.2),inset 2px 2px 5px rgba(0,0,0,.12)}
+.btn.secondary{background:linear-gradient(145deg,#f4fff8,#d4f0df);color:#075b3a;border-color:#fff;box-shadow:0 8px 15px rgba(4,73,48,.12),inset 1px 1px 3px #fff}
+.btn.outline{background:rgba(255,255,255,.62);border-color:#2d8a5c}
+
+/* 3D form controls */
+.field input,.field select,.field textarea{
+  background:rgba(255,255,255,.82);border:1px solid rgba(13,122,77,.16);border-radius:14px;
+  box-shadow:inset 2px 2px 6px rgba(4,59,41,.06),0 4px 12px rgba(4,59,41,.05);
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#32b66e;box-shadow:0 0 0 4px rgba(50,182,110,.13),inset 2px 2px 6px rgba(4,59,41,.05)}
+
+/* real map gets a raised 3D frame */
+.map-shell{padding:4px;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.72),rgba(191,231,207,.58));box-shadow:0 20px 45px rgba(4,59,41,.16),inset 0 1px 0 #fff}
+#leafletMap{height:520px!important;border:0;border-radius:22px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 8px 20px rgba(0,0,0,.12)}
+.leaflet-control{box-shadow:0 8px 18px rgba(0,0,0,.18)!important;border-radius:10px!important;overflow:hidden}
+.leaflet-bar a{background:rgba(255,255,255,.92)!important;color:#075b3a!important}
+
+/* evidence cards, tables and notices */
+.evidence-card,.visit-card,.profile-card,.finding-card,.certificate-box,.notice{
+  border-radius:18px!important;box-shadow:0 10px 24px rgba(4,59,41,.08),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.status,.status-pill{box-shadow:inset 1px 1px 2px rgba(255,255,255,.8),0 4px 8px rgba(4,59,41,.08)}
+th{background:linear-gradient(180deg,#effaf3,#e2f3e9)}
+.admin-only{border-left:0!important;border-top:4px solid #25a867}
+
+/* Security/login screen */
+#securityGate{background:radial-gradient(circle at 20% 10%,#36a96e 0,transparent 26%),linear-gradient(145deg,#022f20,#075b3a 54%,#d9f3e4)}
+.auth-card{background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.65);border-radius:28px;box-shadow:0 30px 80px rgba(0,0,0,.27),inset 0 1px 0 #fff;backdrop-filter:blur(20px)}
+.role-btn{background:rgba(235,250,241,.78);border:1px solid rgba(13,122,77,.15);box-shadow:0 8px 18px rgba(4,59,41,.08),inset 1px 1px 3px rgba(255,255,255,.9);transition:.16s ease}
+.role-btn:hover{transform:translateY(-2px)}
+.role-btn.active{background:linear-gradient(145deg,#15905a,#075b3a);box-shadow:0 10px 20px rgba(4,59,41,.2),inset 1px 1px 3px rgba(255,255,255,.2)}
+
+/* Footer */
+footer{color:#4c6f60}
+
+@media(max-width:850px){
+  main{padding:14px}
+  .topbar{top:7px;padding:0 8px}
+  .topbar-inner{min-height:64px;border-radius:19px;padding:8px 10px}
+  .brand-title{font-size:.98rem}
+  .brand small{font-size:.64rem}
+  .hero-content{padding:24px 20px;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end}
+  .card{border-radius:20px;padding:17px}
+  .sidebar{width:min(88vw,320px);border-radius:0 24px 24px 0}
+}
+@media(max-width:520px){
+  .menu-btn{width:42px;height:42px}
+  .topbar-actions .btn{padding:9px 10px;font-size:.72rem}
+  .hero{min-height:360px}
+  .hero h1{font-size:1.72rem}
+  #leafletMap{height:430px!important}
+}
+
+</style>
+</head>
+<body>
+
+<div id="securityGate">
+  <div class="auth-card">
+    <h1>SECURITY AGENT LOGIN</h1>
+    <p>Enter the Security Agent credentials first. Then choose the section you want to open.</p>
+
+    <div id="securityStep">
+      <div class="step-label">STEP 1 — SECURITY AGENT</div>
+      <div class="field">
+        <label for="securityUsername">Username</label>
+        <input id="securityUsername" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="securityPassword">Password</label>
+        <input id="securityPassword" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn" id="securityLoginBtn">AUTHENTICATE SECURITY AGENT</button>
+      <div id="securityMsg" class="auth-message"></div>
+      <div class="auth-note">Security Agent authentication is required only once on this browser. After successful authentication, the browser remembers the security gate for future visits.</div>
+    </div>
+
+    <div id="roleStep" class="hidden">
+      <div class="step-label">STEP 2 — CHOOSE A SECTION</div>
+      <div class="role-grid">
+        <button class="role-btn" data-role="Owner">OWNER</button>
+        <button class="role-btn" data-role="Teacher">TEACHER</button>
+        <button class="role-btn" data-role="Student">STUDENT</button>
+      </div>
+      <div class="step-label">SECTION LOGIN</div>
+      <div class="field">
+        <label for="roleUsername">Username</label>
+        <input id="roleUsername" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="rolePassword">Password</label>
+        <input id="rolePassword" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn" id="roleLoginBtn">OPEN SECTION</button>
+      <div id="roleMsg" class="auth-message"></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <button class="menu-btn" id="menuOpen" aria-label="Open navigation">MENU</button>
+        <div class="brand">
+          <div class="brand-title">Mangroovy walk</div>
+          <small>School Monitoring & Rewards</small>
+        </div>
+        <div class="topbar-actions">
+          <div id="userChip" class="user-chip"></div>
+          <button class="btn small" id="logoutBtn">LOGOUT</button>
+        </div>
+      </div>
+    </header>
+
+    <div id="navOverlay" class="overlay"></div>
+    <aside id="sidebar" class="sidebar">
+      <button class="btn small close" id="menuClose">CLOSE</button>
+      <div class="nav">
+        <button data-section="home">HOME</button>
+        <button data-section="map">MAP VIEW</button>
+        <button data-section="threats">THREATS</button>
+        <button data-section="act">ACT</button>
+        <button data-section="work">OUR WORK</button>
+          <button data-section="organisations">ORGANISATIONS</button>
+        <button data-section="capture">CAPTURE EVIDENCE</button>
+        <button data-section="logbook">FIELD LOGBOOK</button>
+        <button data-section="findings">SEND FINDINGS</button>
+        <button data-section="ownerDashboard" id="pointSystemNav" class="owner-nav-only">POINT SYSTEM</button>
+      </div>
+    </aside>
+
+    <main>
+      <section id="home" class="section active">
+        <div class="hero">
+          <div class="hero-content">
+            <div class="dashboard-role" id="homeRole"></div>
+            <h1>WHY MANGROVES MATTER — IN 1 MIN</h1>
+            <p>Mangroves are coastal ecosystems made up of salt-tolerant plants and trees. Around Mumbai, they form an important natural buffer between land and the sea.</p>
+            <p>Mangroves help reduce the impact of coastal flooding, store carbon, provide habitat for birds and wildlife, trap sediments, and support healthy coastal ecosystems.</p>
+            <p class="tagline">“Spot karo,Snap karo, Share karo”</p>
+          </div>
+          <div class="hero-visual" role="img" aria-label="Mangrove forest along a coastal wetland">
+            <div>
+              <h2>Mumbai's Mangrove Ecosystems</h2>
+              <p>A student-led environmental monitoring project focused on observation, evidence and responsible action.</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card span-6">
+            <h2>School</h2>
+            <p><strong id="schoolNameText"></strong><br><span id="schoolAddressText"></span></p>
+          </div>
+          <div class="card span-6">
+            <h2>Student-led Project</h2>
+            <p>Class 10 students document visible environmental conditions, waste categories, locations and observations while following safe field practices.</p>
+          </div>
+          <div class="card span-4">
+            <h3>Flood Protection</h3>
+            <p>Mangrove vegetation can reduce wave and water impacts along vulnerable coastal areas.</p>
+          </div>
+          <div class="card span-4">
+            <h3>Carbon Storage</h3>
+            <p>Mangrove ecosystems store carbon in vegetation and coastal sediments.</p>
+          </div>
+          <div class="card span-4">
+            <h3>Wildlife Habitat</h3>
+            <p>Mangroves provide habitat and feeding areas for birds and other wildlife.</p>
+          </div>
+          <div class="card span-12">
+            <h2>Project Visual Area</h2>
+            <div class="notice">Student/project photographs can be captured and stored through the CAPTURE EVIDENCE section. No sample image is presented as field proof.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="map" class="section">
+  <div class="card">
+    <div class="map-real-title">
+      <div>
+        <h1>LIVE MANGROVE MONITORING MAP</h1>
+        <p class="muted">Real interactive Mumbai map. Zoom, pan and tap markers to view information.</p>
+      </div>
+      <div class="map-tools">
+        <button class="btn btn-secondary" type="button" id="mapMumbaiBtn">MUMBAI</button>
+        <button class="btn btn-secondary" type="button" id="mapVikhroliBtn">VIKHROLI</button>
+        <button class="btn btn-secondary" type="button" id="mapLocateBtn">MY LOCATION</button>
+      </div>
+    </div>
+
+    <div id="leafletMap" aria-label="Interactive Mumbai mangrove monitoring map"></div>
+
+    <div class="map-caption">
+      <span><strong>School:</strong> B M C School, Vikhroli West</span>
+      <span><strong>Green:</strong> conservation reference</span>
+      <span><strong>Blue:</strong> organisation/project reference</span>
+      <span><strong>Evidence:</strong> submitted observations</span>
+    </div>
+
+    <div class="notice" style="margin-top:12px">
+      <strong>B M C School:</strong> Varsha Nagar, Vikhroli West, Mumbai.
+      The school marker is an approximate area reference.
+      <br><a href="https://maps.app.goo.gl/SBFCJHAu8hMPTLVZ6" target="_blank" rel="noopener">Open the provided school Google Maps reference</a>
+    </div>
+  </div>
+</section>
+
+      <section id="threats" class="section">
+        <div class="card"><h1>THREATS</h1><p>Learn what students can safely observe in the field.</p></div>
+        <div class="grid">
+          <div class="card span-6"><h2>Plastic</h2><p><strong>Why harmful:</strong> Plastic can persist in the environment and may affect wildlife and waterways.</p><p><strong>Observe:</strong> visible bags, bottles, packaging and fragments.</p><p><strong>Do:</strong> record the location and inform an adult or appropriate authority. Do not touch unknown waste.</p></div>
+          <div class="card span-6"><h2>Debris Dumping</h2><p><strong>Why harmful:</strong> dumped material can obstruct water flow and damage habitat.</p><p><strong>Observe:</strong> piles of construction or household debris.</p><p><strong>Do:</strong> document from a safe public position and report through responsible adults or authorities.</p></div>
+          <div class="card span-6"><h2>Sewage / Water Pollution</h2><p><strong>Why harmful:</strong> polluted water can reduce water quality and affect aquatic life.</p><p><strong>Observe:</strong> unusual discharge, persistent surface contamination or strong visible pollution indicators.</p><p><strong>Do:</strong> stay away from contaminated water and report the observation.</p></div>
+          <div class="card span-6"><h2>Cutting / Habitat Damage</h2><p><strong>Why harmful:</strong> removal of vegetation can reduce habitat and coastal protection functions.</p><p><strong>Observe:</strong> visible cutting, clearing or damaged vegetation.</p><p><strong>Do:</strong> do not confront anyone. Record safely and tell an adult or appropriate authority.</p></div>
+        </div>
+      </section>
+
+      <section id="act" class="section">
+        <div class="grid">
+          <div class="card span-6"><h1>Citizen Do's</h1><ul class="info-list"><li>Observe from safe public areas.</li><li>Record date, time and location.</li><li>Inform a teacher, adult or appropriate authority.</li><li>Keep evidence factual and respectful.</li></ul></div>
+          <div class="card span-6"><h1>Citizen Don'ts</h1><ul class="info-list"><li>Never go alone.</li><li>Do not enter water, mud or mangrove roots.</li><li>Do not touch unknown waste.</li><li>Do not confront people dumping waste or cutting vegetation.</li></ul></div>
+          <div class="card span-12"><h1>Mangrove Protection Pledge</h1><p>I will observe mangrove areas responsibly, avoid disturbing wildlife and vegetation, record field information honestly, and share concerns through safe and appropriate channels.</p></div>
+          <div class="card span-12"><h1>Emergency / Official Reporting</h1><p><strong>Helpline: 1926</strong></p><p>For immediate danger, follow your school's safety procedure and contact an adult or appropriate emergency service. For environmental complaints, use official municipal or government reporting channels applicable to the location.</p></div>
+        </div>
+      </section>
+
+      <section id="work" class="section">
+        <div class="grid">
+          <div class="card span-6"><h1>OUR WORK</h1><p><strong>School:</strong> <span id="workSchool"></span></p><p><strong>Class:</strong> Class 10</p><p><strong>Student/team information:</strong> School monitoring project team</p><p><strong>Why we are doing this project:</strong> To learn how students can document visible environmental conditions and promote safer, evidence-based mangrove monitoring.</p></div>
+          <div class="card span-6"><h1>FIELD LOGBOOK</h1><p>Every submitted evidence record is automatically represented in the local field logbook.</p><button class="btn" data-jump="logbook">OPEN FIELD LOGBOOK</button></div>
+        </div>
+      </section>
+
+      <section id="organisations" class="section">
+        <div class="card">
+          <h1>ORGANISATIONS WORKING FOR WATER BODIES &amp; MANGROVES</h1>
+          <p class="muted">These organisations have documented work connected with Mumbai's mangroves, wetlands, water pollution, restoration, awareness or conservation. Map pins are organisation/project references, not claims that every organisation operates from that exact pin.</p>
+        </div>
+        <div class="grid">
+          <div class="card span-6 org-card"><h2>Godrej Enterprises Group / Godrej &amp; Boyce</h2><p>Conserves the Godrej mangroves in Vikhroli and documents mangrove restoration, conservation, research and awareness work. Its Vikhroli sustainability work also includes wastewater treatment/recycling and waste-management initiatives.</p><p><strong>Map point:</strong> Godrej / Vikhroli mangrove conservation area.</p><a class="btn btn-secondary" href="https://www.godrejenterprises.com/" target="_blank" rel="noopener">Official Website</a> <a class="btn btn-secondary" href="https://mangroves.godrej.com/" target="_blank" rel="noopener">Mangroves Website</a></div>
+          <div class="card span-6 org-card"><h2>United Way Mumbai — Mission Mangroves</h2><p>Works on Mumbai wetland and mangrove conservation through waste management, wetland cleaning, mangrove maintenance, restoration and community awareness. Its programme uses Safai Saathis and clean-up activities at adopted wetland sites.</p><p><strong>Map point:</strong> Mumbai wetland / mangrove programme reference.</p><a class="btn btn-secondary" href="https://www.unitedwaymumbai.org/mission-mangroves" target="_blank" rel="noopener">Official Mission Mangroves Page</a></div>
+          <div class="card span-6 org-card"><h2>Vanashakti</h2><p>Mumbai environmental NGO focused on forests, mangroves, rivers and wetlands. Its documented work includes mangrove clean-up drives, awareness and protection of wetlands and mangroves.</p><p><strong>Map point:</strong> Bhandup / Mumbai mangrove-wetland activity reference.</p><a class="btn btn-secondary" href="https://vanashakti.org/" target="_blank" rel="noopener">Official Website</a></div>
+          <div class="card span-6 org-card"><h2>Conservation Action Trust (CAT)</h2><p>Environmental NGO based in Ghatkopar, with documented work protecting mangroves, wetlands, forests and water security, including conservation initiatives concerning Mumbai mangroves.</p><p><strong>Map point:</strong> Ghatkopar office / Mumbai mangrove conservation reference.</p><a class="btn btn-secondary" href="https://cat.org.in/" target="_blank" rel="noopener">Official Website</a></div>
+        </div>
+        <div class="notice"><strong>Source note:</strong> Organisation descriptions are based on official websites and published programme material. The website does not imply endorsement or partnership with B M C School.</div>
+      </section>
+
+      
+<section id="profile" class="section">
+  <div class="card">
+    <h1>MY PROFILE</h1>
+    <p class="muted">Keep your school and field-work details ready for evidence and reports. Profile data is stored only on this browser.</p>
+    <div class="profile-grid">
+      <label>Full Name<input id="profileName" type="text" placeholder="Your name"></label>
+      <label>Class / Section<input id="profileClass" type="text" placeholder="e.g. 10-A"></label>
+      <label>School<input id="profileSchool" type="text" value="B M C School"></label>
+      <label>Area<input id="profileArea" type="text" value="Varsha Nagar, Vikhroli West, Mumbai"></label>
+    </div>
+    <div class="field-actions">
+      <button class="btn btn-primary" id="saveProfileBtn">SAVE PROFILE</button>
+      <button class="btn btn-secondary" id="loadProfileBtn">REFRESH PROFILE</button>
+    </div>
+    <div class="notice" id="profileSavedNote" style="display:none;margin-top:12px">Profile saved on this browser.</div>
+  </div>
+</section>
+
+<section id="capture" class="section">
+        <div class="card">
+          <h1>CAPTURE EVIDENCE</h1>
+<div class="card" style="margin-top:14px">
+  <h2>FIELD CAMERA & LOCATION</h2>
+  <p class="muted">Use your phone camera, then choose the exact observation point on the map. Location is saved with the evidence.</p>
+  <div class="field-actions">
+    <button type="button" class="btn btn-primary" id="openPhotoCameraBtn">TAKE PHOTO</button>
+    <button type="button" class="btn btn-primary" id="openVideoCameraBtn">RECORD VIDEO</button>
+    <button type="button" class="btn btn-secondary" id="useCurrentLocationBtn">USE MY LOCATION</button>
+    <button type="button" class="btn btn-secondary" id="clearPickedLocationBtn">CLEAR LOCATION</button>
+  </div>
+  <div class="location-picker" id="capturePickerMap"></div>
+  <div class="coord-grid">
+    <label>Latitude<input id="pickedLat" type="number" step="any" placeholder="Tap map or use location"></label>
+    <label>Longitude<input id="pickedLng" type="number" step="any" placeholder="Tap map or use location"></label>
+  </div>
+  <div class="camera-note">For safety, only record from public/safe areas. Do not enter water or mangrove roots.</div>
+  <input id="photoCameraInput" type="file" accept="image/*" capture="environment" hidden>
+  <input id="videoCameraInput" type="file" accept="video/*" capture="environment" hidden>
+  <div id="capturePreview" class="capture-preview"></div>
+</div>
+
+          <p class="muted">Use the phone's native camera or choose an existing file. Evidence is stored locally in this browser.</p>
+          <form id="evidenceForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="evidenceType">Evidence type</label>
+                <select id="evidenceType" required><option>Photo</option><option>Video</option></select>
+              </div>
+              <div class="field">
+                <label for="evidenceFile">Photo / Video</label>
+                <input id="evidenceFile" type="file" accept="image/*" capture="environment" required>
+              </div>
+              <div class="field">
+                <label for="wasteType">Waste type</label>
+                <select id="wasteType" required><option>Domestic Waste</option><option>Organic Waste</option><option>Industrial Waste</option></select>
+              </div>
+              <div class="field">
+                <label for="material">Material</label>
+                <input id="material" placeholder="For example: plastic packaging">
+              </div>
+              <div class="field">
+                <label for="quantity">Approximate quantity</label>
+                <input id="quantity" placeholder="For example: one small pile">
+              </div>
+              <div class="field">
+                <label for="source">Possible source</label>
+                <input id="source" placeholder="If known">
+              </div>
+              <div class="field full">
+                <label for="otherDetails">Other useful details</label>
+                <input id="otherDetails">
+              </div>
+              <div class="field full">
+                <label for="observation">Observation</label>
+                <textarea id="observation" required></textarea>
+              </div>
+              <div class="field">
+                <label for="location">Location</label>
+                <input id="location" required placeholder="Place / landmark">
+              </div>
+              <div class="field full">
+                <label>Status — select all that apply</label>
+                <div class="checkbox-group" id="statusOptions">
+                  <label><input type="checkbox" name="statusOption" value="Dumping Seen"> Dumping Seen</label>
+                  <label><input type="checkbox" name="statusOption" value="Construction"> Construction</label>
+                  <label><input type="checkbox" name="statusOption" value="Plastic"> Plastic</label>
+                </div>
+                <input id="status" type="hidden" required>
+              </div>
+              <div class="field">
+                <label for="latitude">Latitude</label>
+                <input id="latitude" type="number" step="any" placeholder="Optional">
+              </div>
+              <div class="field">
+                <label for="longitude">Longitude</label>
+                <input id="longitude" type="number" step="any" placeholder="Optional">
+              </div>
+              <div class="field">
+                <label for="date">Date</label>
+                <input id="date" type="date" required>
+              </div>
+              <div class="field">
+                <label for="time">Time</label>
+                <input id="time" type="time" required>
+              </div>
+              <div class="field full">
+                <label>Submitted by</label>
+                <input id="submittedBy" readonly>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn" type="submit">SAVE EVIDENCE</button>
+              <button class="btn secondary" type="button" id="getLocationBtn">USE CURRENT LOCATION</button>
+            </div>
+            <div id="captureMsg" class="auth-message"></div>
+          </form>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>SAVED EVIDENCE</h2>
+          <div id="savedEvidence"></div>
+        </div>
+      </section>
+
+      <section id="logbook" class="section">
+        <div class="card">
+          <h1>FIELD LOGBOOK</h1>
+          <div id="logbookContent"></div>
+        </div>
+      </section>
+
+      <section id="findings" class="section">
+        <div class="grid">
+          <div class="card span-6">
+            <h1>SEND FINDINGS</h1>
+            <p>Generate a PDF report from locally stored field observations and evidence.</p>
+            <button class="btn" id="pdfBtn">GENERATE PDF REPORT</button>
+            <div id="pdfMsg" class="notice" style="margin-top:12px">Filename: Mangrove-Watch-Mumbai-Report.pdf</div>
+          </div>
+          <div class="card span-6">
+            <h1>EMAIL DRAFT</h1>
+            <p>Prepare a local email draft containing a concise summary of the findings. The browser's mail application will handle sending.</p>
+            <button class="btn secondary" id="emailBtn">CREATE EMAIL DRAFT</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="ownerDashboard" class="section">
+        <div class="grid">
+          <div class="card span-4 admin-only"><h2>School Points</h2><div class="kpi" id="ownerPointsKpi">0</div></div>
+          <div class="card span-4 admin-only"><h2>Evidence Records</h2><div class="kpi" id="ownerEvidenceKpi">0</div></div>
+          <div class="card span-4 admin-only"><h2>Verified Records</h2><div class="kpi" id="ownerVerifiedKpi">0</div></div>
+          <div class="card span-6 admin-only">
+            <h2>Point Giving System</h2>
+            <p class="muted">Set the points the Owner awards when a Teacher or Student observation is verified.</p>
+            <div class="field"><label for="teacherPoints">Teacher points given by Owner</label><input id="teacherPoints" type="number" min="0" step="1"></div>
+            <div class="field"><label for="studentPoints">Student points given by Owner</label><input id="studentPoints" type="number" min="0" step="1"></div>
+            <div class="actions"><button class="btn" id="savePointSettings">SAVE POINT SETTINGS</button><button class="btn danger" id="resetPointsBtn">RESET POINTS</button></div>
+          </div>
+          <div class="card span-6 admin-only">
+            <h2>Certificate Eligibility</h2>
+            <div class="field"><label for="certificateThreshold">Certificate threshold</label><input id="certificateThreshold" type="number" min="0" step="1"></div>
+            <button class="btn" id="saveCertificateSettings">SAVE CERTIFICATE THRESHOLD</button>
+            <div class="certificate-box" style="margin-top:12px">
+              <div class="points-line"><strong>School Points</strong><span id="certificatePoints">0 / 100</span></div>
+              <p id="certificateStatus"></p>
+            </div>
+          </div>
+          <div class="card span-12 admin-only">
+            <h2>Account Management</h2>
+            <div class="form-grid">
+              <div class="field"><label for="teacherUsername">Teacher username</label><input id="teacherUsername"></div>
+              <div class="field"><label for="teacherPassword">Teacher password</label><input id="teacherPassword" type="password"></div>
+              <div class="field"><label for="studentUsername">Student username</label><input id="studentUsername"></div>
+              <div class="field"><label for="studentPassword">Student password</label><input id="studentPassword" type="password"></div>
+            </div>
+            <div class="actions"><button class="btn" id="saveAccountsBtn">SAVE ACCOUNT SETTINGS</button></div>
+            <p class="muted">Passwords are only displayed here to the Owner while editing account settings.</p>
+          </div>
+          <div class="card span-12 admin-only">
+            <h2>Submitted Evidence — Verification & Delete</h2>
+            <div id="ownerEvidence"></div>
+          </div>
+          
+          </div>
+        </div>
+      </section>
+
+      <section id="teacherDashboard" class="section">
+        <div class="grid">
+          <div class="card span-4"><h2>Your Points</h2><div class="kpi" id="teacherPointsKpi">0</div></div>
+          <div class="card span-8"><h2>Teacher Dashboard</h2><p>Submit observations through CAPTURE EVIDENCE. Owner verification controls are not available in this dashboard.</p></div>
+          <div class="card span-12"><h2>School & Environmental Information</h2><p><strong>B M C School</strong><br>Varsha Nagar, Vikhroli West, Mumbai</p><p>Waste-management categories: Domestic Waste, Organic Waste, Industrial Waste.</p><p>Environmental focus: mangrove protection, pollution observation, safe field documentation.</p></div>
+        </div>
+      </section>
+
+      <section id="studentDashboard" class="section">
+        <div class="grid">
+          <div class="card span-4"><h2>Your Points</h2><div class="kpi" id="studentPointsKpi">0</div></div>
+          <div class="card span-8"><h2>Student Dashboard</h2><p>Submit observations through CAPTURE EVIDENCE. Owner verification controls are not available in this dashboard.</p></div>
+          <div class="card span-12"><h2>School & Environmental Information</h2><p><strong>B M C School</strong><br>Varsha Nagar, Vikhroli West, Mumbai</p><p>Waste-management categories: Domestic Waste, Organic Waste, Industrial Waste.</p><p>Environmental focus: mangrove protection, pollution observation, safe field documentation.</p></div>
+        </div>
+      </section>
+    </main>
+    <footer>Mangroovy walk — School Monitoring & Rewards</footer>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+"use strict";
+
+const DB_NAME = "MumbaiMangroveWatchDB";
+const DB_VERSION = 1;
+let db = null;
+let currentUser = null;
+let selectedRole = null;
+let map = null;
+let mapMarkers = [];
+let schoolMarker = null;
+
+const defaultState = {
+  school: {
+    name: "B M C School",
+    address: "Varsha Nagar, Vikhroli West, Mumbai",
+    mapsUrl: "https://maps.app.goo.gl/SBFCJHAu8hMPTLVZ6"
+  },
+  points: { school: 0, users: {} },
+  settings: { teacherPoints: 15, studentPoints: 10, certificateThreshold: 100 },
+  accounts: {
+    Owner: { username: "Varsha Nagar.mps", password: "Varsha@123" },
+    Teacher: { username: "teacher", password: "teacher123" },
+    Student: { username: "student", password: "student123" }
+  }
+};
+
+function qs(id){ return document.getElementById(id); }
+function esc(v){
+  return String(v ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function nowParts(){
+  const d = new Date();
+  return {
+    date: d.toISOString().slice(0,10),
+    time: d.toTimeString().slice(0,5)
+  };
+}
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const database = e.target.result;
+      if(!database.objectStoreNames.contains("kv")) database.createObjectStore("kv",{keyPath:"key"});
+      if(!database.objectStoreNames.contains("evidence")) {
+        const store = database.createObjectStore("evidence",{keyPath:"id"});
+        store.createIndex("createdAt","createdAt");
+      }
+    };
+    req.onsuccess = e => { db=e.target.result; resolve(db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+function kvGet(key){
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("kv","readonly").objectStore("kv").get(key);
+    r.onsuccess=()=>resolve(r.result ? r.result.value : null);
+    r.onerror=()=>reject(r.error);
+  });
+}
+function kvSet(key,value){
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("kv","readwrite").objectStore("kv").put({key,value});
+    r.onsuccess=()=>resolve();
+    r.onerror=()=>reject(r.error);
+  });
+}
+function evidenceGetAll(){
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("evidence","readonly").objectStore("evidence").getAll();
+    r.onsuccess=()=>resolve(r.result || []);
+    r.onerror=()=>reject(r.error);
+  });
+}
+function evidencePut(item){
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("evidence","readwrite").objectStore("evidence").put(item);
+    r.onsuccess=()=>resolve();
+    r.onerror=()=>reject(r.error);
+  });
+}
+function evidenceDelete(id){
+  return new Promise((resolve,reject)=>{
+    const r=db.transaction("evidence","readwrite").objectStore("evidence").delete(id);
+    r.onsuccess=()=>resolve();
+    r.onerror=()=>reject(r.error);
+  });
+}
+async function loadState(){
+  let state = await kvGet("state");
+  if(!state){
+    state = structuredClone(defaultState);
+    await kvSet("state",state);
+  } else {
+    state = Object.assign(structuredClone(defaultState), state);
+    state.school = Object.assign(structuredClone(defaultState.school), state.school || {});
+    state.points = Object.assign(structuredClone(defaultState.points), state.points || {});
+    state.settings = Object.assign(structuredClone(defaultState.settings), state.settings || {});
+    state.accounts = Object.assign(structuredClone(defaultState.accounts), state.accounts || {});
+  }
+  return state;
+}
+async function saveState(state){ await kvSet("state",state); }
+function setMessage(id,msg,good=false){
+  const el=qs(id); if(!el)return;
+  el.textContent=msg; el.style.color=good ? "var(--green)" : "var(--danger)";
+}
+function setRole(role){
+  selectedRole=role;
+  document.querySelectorAll(".role-btn").forEach(b=>b.classList.toggle("active",b.dataset.role===role));
+  qs("roleUsername").value="";
+  qs("rolePassword").value="";
+  qs("roleMsg").textContent="";
+}
+async function securityLogin(){
+  const u=qs("securityUsername").value.trim();
+  const p=qs("securityPassword").value;
+  if(u==="Varsha Nagar MPS" && p==="vnmps"){
+    localStorage.setItem("mmw_security_authenticated","1");
+    qs("securityStep").classList.add("hidden");
+    qs("roleStep").classList.remove("hidden");
+    setMessage("securityMsg","Security Agent authenticated for this browser.",true);
+  }else setMessage("securityMsg","Invalid Security Agent credentials.");
+}
+async function roleLogin(){
+  if(!selectedRole){ setMessage("roleMsg","Choose Owner, Teacher or Student first."); return; }
+  const state=await loadState();
+  const acc=state.accounts[selectedRole];
+  if(!acc || qs("roleUsername").value.trim()!==acc.username || qs("rolePassword").value!==acc.password){
+    setMessage("roleMsg","Invalid section credentials.");
+    return;
+  }
+  currentUser={role:selectedRole,username:acc.username};
+  sessionStorage.setItem("mmw_session",JSON.stringify(currentUser));
+  openApp();
+}
+function openApp(){
+  qs("securityGate").classList.add("hidden");
+  qs("app").classList.remove("hidden");
+  qs("userChip").textContent=currentUser.role + " — " + currentUser.username;
+  qs("homeRole").textContent=currentUser.role + " DASHBOARD";
+  qs("submittedBy").value=currentUser.role + " — " + currentUser.username;
+  qs("pointSystemNav")?.classList.toggle("visible", currentUser.role === "Owner");
+  const np=nowParts(); qs("date").value=np.date; qs("time").value=np.time;
+  renderRoleDashboard();
+  if(currentUser.role==="Owner") showSection("ownerDashboard");
+  else if(currentUser.role==="Teacher") showSection("teacherDashboard");
+  else showSection("studentDashboard");
+}
+function logout(){
+  sessionStorage.removeItem("mmw_session");
+  currentUser=null; selectedRole=null;
+  qs("app").classList.add("hidden");
+  qs("securityGate").classList.remove("hidden");
+  // Security Agent authentication is intentionally one-time on this browser.
+  // Logout returns to section selection rather than asking for the security
+  // credentials again.
+  qs("securityStep").classList.add("hidden");
+  qs("roleStep").classList.remove("hidden");
+  qs("roleUsername").value="";
+  qs("rolePassword").value="";
+  document.querySelectorAll(".role-btn").forEach(b=>b.classList.remove("active"));
+}
+function showSection(id){
+  if(id==="ownerDashboard" && currentUser?.role!=="Owner") return;
+  document.querySelectorAll("main .section").forEach(s=>s.classList.remove("active"));
+  const el=qs(id); if(el)el.classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
+  closeMenu();
+  if(id==="map") setTimeout(initMap,80);
+}
+function openMenu(){qs("sidebar").classList.add("open");qs("navOverlay").classList.add("show")}
+function closeMenu(){qs("sidebar").classList.remove("open");qs("navOverlay").classList.remove("show")}
+function renderRoleDashboard(){
+  ["ownerDashboard","teacherDashboard","studentDashboard"].forEach(id=>qs(id).classList.remove("active"));
+  const id=currentUser.role==="Owner"?"ownerDashboard":currentUser.role==="Teacher"?"teacherDashboard":"studentDashboard";
+  showSection(id);
+}
+function ensureNavDashboard(){
+  if(currentUser && currentUser.role==="Owner") return;
+}
+async function refreshUI(){
+  const state=await loadState();
+  qs("schoolNameText").textContent=state.school.name;
+  qs("schoolAddressText").textContent=state.school.address;
+  qs("workSchool").textContent=state.school.name;
+  if(currentUser){
+    qs("submittedBy").value=currentUser.role + " — " + currentUser.username;
+    if(currentUser.role==="Owner"){
+      qs("teacherPoints").value=state.settings.teacherPoints;
+      qs("studentPoints").value=state.settings.studentPoints;
+      qs("certificateThreshold").value=state.settings.certificateThreshold;
+      qs("teacherUsername").value=state.accounts.Teacher.username;
+      qs("teacherPassword").value=state.accounts.Teacher.password;
+      qs("studentUsername").value=state.accounts.Student.username;
+      qs("studentPassword").value=state.accounts.Student.password;
+      qs("ownerPointsKpi").textContent=state.points.school;
+      qs("certificatePoints").textContent=state.points.school+" / "+state.settings.certificateThreshold;
+      qs("certificateStatus").textContent=state.points.school>=state.settings.certificateThreshold
+        ?"Eligible for a participation certificate."
+        :"Not yet eligible.";
+    } else if(currentUser.role==="Teacher"){
+      qs("teacherPointsKpi").textContent=state.points.users[currentUser.username] || 0;
+    } else if(currentUser.role==="Student"){
+      qs("studentPointsKpi").textContent=state.points.users[currentUser.username] || 0;
+    }
+  }
+  await renderEvidence();
+  await renderLogbook();
+  if(currentUser?.role==="Owner") await renderOwnerEvidence();
+  if(map) updateMapMarkers();
+}
+function mediaURL(blob){
+  return URL.createObjectURL(blob);
+}
+async function renderEvidence(){
+  const all=await evidenceGetAll();
+  const relevant=currentUser?.role==="Owner" ? all : all.filter(x=>x.submittedBy===currentUser?.username && x.submittedRole===currentUser?.role);
+  const box=qs("savedEvidence");
+  if(!relevant.length){box.innerHTML='<div class="empty">No saved evidence records for this section.</div>';return}
+  box.innerHTML=relevant.sort((a,b)=>b.createdAt-a.createdAt).map(item=>evidenceHTML(item,false)).join("");
+}
+function evidenceHTML(item,admin){
+  const media=item.mediaType==="video"
+    ? `<video class="media-preview" controls src="${mediaURL(item.file)}"></video>`
+    : `<img class="media-preview" src="${mediaURL(item.file)}" alt="Submitted field evidence">`;
+  const verification=item.verified
+    ? '<span class="status">Verified</span>'
+    : '<span class="status warn">Pending Verification</span>';
+  const adminControls=admin ? `
+    <div class="actions">
+      ${item.verified ? '' : `<button class="btn small" data-verify="${esc(item.id)}">VERIFY & AWARD POINTS</button>`}
+      <button class="btn danger small" data-delete="${esc(item.id)}">DELETE EVIDENCE</button>
+    </div>` : "";
+  return `<article class="card evidence-card" style="margin-top:12px">
+    <div>${media}</div>
+    <div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">${verification}<span class="status">${esc(item.status)}</span></div>
+      <div class="evidence-meta">
+        <div><strong>Waste:</strong> ${esc(item.wasteType)}</div>
+        <div><strong>Evidence:</strong> ${esc(item.evidenceType)}</div>
+        <div><strong>Material:</strong> ${esc(item.material)}</div>
+        <div><strong>Quantity:</strong> ${esc(item.quantity)}</div>
+        <div><strong>Possible source:</strong> ${esc(item.source)}</div>
+        <div><strong>Location:</strong> ${esc(item.location)}</div>
+        <div><strong>Date:</strong> ${esc(item.date)}</div>
+        <div><strong>Time:</strong> ${esc(item.time)}</div>
+        <div><strong>Submitted by:</strong> ${esc(item.submittedRole)} — ${esc(item.submittedBy)}</div>
+        <div><strong>Points awarded:</strong> ${esc(item.pointsAwarded || 0)}</div>
+      </div>
+      <p><strong>Waste details:</strong> ${esc(item.otherDetails || "None")}</p>
+      <p><strong>Observation:</strong> ${esc(item.observation)}</p>
+      ${item.latitude!=="" && item.longitude!=="" ? `<p><strong>Coordinates:</strong> ${esc(item.latitude)}, ${esc(item.longitude)}</p>`:""}
+      ${adminControls}
+    </div>
+  </article>`;
+}
+async function renderOwnerEvidence(){
+  const all=await evidenceGetAll();
+  const box=qs("ownerEvidence");
+  qs("ownerEvidenceKpi").textContent=all.length;
+  qs("ownerVerifiedKpi").textContent=all.filter(x=>x.verified).length;
+  if(!all.length){box.innerHTML='<div class="empty">No submitted evidence yet.</div>';return}
+  box.innerHTML=all.sort((a,b)=>b.createdAt-a.createdAt).map(x=>evidenceHTML(x,true)).join("");
+}
+async function verifyEvidence(id){
+  const all=await evidenceGetAll();
+  const item=all.find(x=>x.id===id); if(!item || item.verified)return;
+  const state=await loadState();
+  const pts=item.submittedRole==="Teacher" ? Number(state.settings.teacherPoints) : Number(state.settings.studentPoints);
+  item.verified=true; item.pointsAwarded=pts; item.verifiedAt=new Date().toISOString();
+  state.points.school=Number(state.points.school||0)+pts;
+  state.points.users[item.submittedBy]=Number(state.points.users[item.submittedBy]||0)+pts;
+  await evidencePut(item); await saveState(state); await refreshUI();
+}
+async function deleteEvidence(id){
+  if(!confirm("Delete this submitted evidence permanently from this browser?"))return;
+  await evidenceDelete(id); await refreshUI();
+}
+function toggleCameraInput(){
+  const type=qs("evidenceType").value;
+  const input=qs("evidenceFile");
+  if(type==="Video"){input.accept="video/*";input.capture="environment";}
+  else {input.accept="image/*";input.capture="environment";}
+}
+function getSelectedStatuses(){
+  return Array.from(document.querySelectorAll('input[name="statusOption"]:checked')).map(x=>x.value);
+}
+function syncStatusField(showMessage=true){
+  const selected=getSelectedStatuses();
+  qs("status").value=selected.join(", ");
+  if(showMessage && !selected.length){
+    setMessage("captureMsg","Please select at least one observation status.");
+    return false;
+  }
+  return true;
+}
+function setupStatusCheckboxes(){
+  document.querySelectorAll('input[name="statusOption"]').forEach(cb=>cb.addEventListener("change",()=>syncStatusField(false)));
+}
+
+async function submitEvidence(e){
+  e.preventDefault();
+  const file=qs("evidenceFile").files[0];
+  if(!file){setMessage("captureMsg","Select or capture a file.");return}
+  const type=qs("evidenceType").value;
+  if(type==="Photo" && !file.type.startsWith("image/")){setMessage("captureMsg","Please select a photo.");return}
+  if(type==="Video" && !file.type.startsWith("video/")){setMessage("captureMsg","Please select a video.");return}
+  if(!syncStatusField(true)) return;
+  const item={
+    id:(crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2))),createdAt:Date.now(),evidenceType:type,
+    mediaType:type.toLowerCase(),file,
+    wasteType:qs("wasteType").value,material:qs("material").value.trim(),
+    quantity:qs("quantity").value.trim(),source:qs("source").value.trim(),
+    otherDetails:qs("otherDetails").value.trim(),observation:qs("observation").value.trim(),
+    location:qs("location").value.trim(),status:qs("status").value,
+    latitude:qs("latitude").value,longitude:qs("longitude").value,
+    date:qs("date").value,time:qs("time").value,
+    submittedBy:currentUser.username,submittedRole:currentUser.role,
+    verified:false,pointsAwarded:0
+  };
+  try{
+    await evidencePut(item);
+    qs("evidenceForm").reset();
+    document.querySelectorAll('input[name="statusOption"]').forEach(cb=>cb.checked=false);
+    qs("status").value="";
+    qs("evidenceType").value="Photo"; toggleCameraInput();
+    const np=nowParts();qs("date").value=np.date;qs("time").value=np.time;
+    qs("submittedBy").value=currentUser.role+" — "+currentUser.username;
+    setMessage("captureMsg","Evidence saved locally.",true);
+    await refreshUI();
+  }catch(err){setMessage("captureMsg","Could not save evidence: "+err.message)}
+}
+async function getLocation(){
+  if(!navigator.geolocation){setMessage("captureMsg","Location is not available in this browser.");return}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    qs("latitude").value=pos.coords.latitude.toFixed(6);
+    qs("longitude").value=pos.coords.longitude.toFixed(6);
+    setMessage("captureMsg","Current location added.",true);
+  },()=>setMessage("captureMsg","Location permission was not granted or is unavailable."));
+}
+async function savePointSettings(){
+  const state=await loadState();
+  state.settings.teacherPoints=Math.max(0,Number(qs("teacherPoints").value||0));
+  state.settings.studentPoints=Math.max(0,Number(qs("studentPoints").value||0));
+  await saveState(state); await refreshUI();
+  alert("Point settings saved.");
+}
+async function saveCertificateSettings(){
+  const state=await loadState();
+  state.settings.certificateThreshold=Math.max(0,Number(qs("certificateThreshold").value||0));
+  await saveState(state); await refreshUI();
+  alert("Certificate threshold saved.");
+}
+async function saveAccounts(){
+  const state=await loadState();
+  state.accounts.Teacher={username:qs("teacherUsername").value.trim(),password:qs("teacherPassword").value};
+  state.accounts.Student={username:qs("studentUsername").value.trim(),password:qs("studentPassword").value};
+  if(!state.accounts.Teacher.username || !state.accounts.Teacher.password || !state.accounts.Student.username || !state.accounts.Student.password){
+    alert("Teacher and Student username/password are required."); return;
+  }
+  await saveState(state); await refreshUI(); alert("Account settings saved.");
+}
+async function resetPoints(){
+  if(!confirm("Reset school and participant points to zero? This does not delete evidence."))return;
+  const state=await loadState(); state.points.school=0; state.points.users={};
+  const all=await evidenceGetAll();
+  for(const item of all){item.pointsAwarded=0;item.verified=false;item.verifiedAt="";await evidencePut(item)}
+  await saveState(state); await refreshUI(); alert("Points and verification awards were reset.");
+}
+let organisationMarkers = [];
+function initMap(){
+  if(!window.L)return;
+  if(!map){
+    map=L.map("leafletMap").setView([19.0760,72.8777],11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(map);
+    schoolMarker=L.marker([19.1085,72.9328]).addTo(map)
+      .bindPopup("<strong>B M C School</strong><br>Varsha Nagar, Vikhroli West, Mumbai<br><small>Approximate area reference.</small><br><a href='https://maps.app.goo.gl/SBFCJHAu8hMPTLVZ6' target='_blank' rel='noopener'>Open school map reference</a>");
+    addOrganisationMarkers();
+    updateMapMarkers();
+  } else { setTimeout(()=>map.invalidateSize(),50); addOrganisationMarkers(); }
+}
+function addOrganisationMarkers(){
+  if(!map || organisationMarkers.length)return;
+  const organisations=[
+    {name:"Godrej Mangroves — Vikhroli",lat:19.1032,lng:72.9421,colour:"#166534",desc:"Vikhroli mangrove conservation and restoration reference. Godrej documents long-term mangrove conservation, research, awareness, wastewater recycling and waste-management initiatives.",url:"https://www.godrejenterprises.com/",extra:"https://mangroves.godrej.com/"},
+    {name:"United Way Mumbai — Mission Mangroves",lat:19.1320,lng:72.9360,colour:"#1d4ed8",desc:"Mumbai wetland and mangrove conservation programme with documented waste management, wetland cleaning, mangrove maintenance and community engagement.",url:"https://www.unitedwaymumbai.org/mission-mangroves"},
+    {name:"Vanashakti — Bhandup / Mumbai wetlands",lat:19.1455,lng:72.9340,colour:"#1d4ed8",desc:"Mumbai environmental NGO working on forests, mangroves, rivers and wetlands; documented mangrove clean-up and awareness work includes Bhandup Pumping Station.",url:"https://vanashakti.org/"},
+    {name:"Conservation Action Trust — Ghatkopar",lat:19.0864,lng:72.9081,colour:"#1d4ed8",desc:"Environmental NGO based in Ghatkopar with documented mangrove, wetland, forest and water-security conservation work.",url:"https://cat.org.in/"}
+  ];
+  const icon=c=>L.divIcon({className:"",html:"<div style='width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:"+c+";border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.28)'></div>",iconSize:[18,18],iconAnchor:[9,18],popupAnchor:[0,-18]});
+  organisations.forEach(o=>{
+    const marker=L.marker([o.lat,o.lng],{icon:icon(o.colour)}).addTo(map);
+    let popup="<strong>"+esc(o.name)+"</strong><br><small>"+esc(o.desc)+"</small><br><br><a href='"+o.url+"' target='_blank' rel='noopener'>Official website</a>";
+    if(o.extra)popup+="<br><a href='"+o.extra+"' target='_blank' rel='noopener'>Mangroves information site</a>";
+    marker.bindPopup(popup); organisationMarkers.push(marker);
+  });
+}
+async function updateMapMarkers(){
+  if(!map)return;
+  mapMarkers.forEach(m=>m.remove());mapMarkers=[];
+  const all=await evidenceGetAll();
+  all.forEach(item=>{
+    const lat=Number(item.latitude),lng=Number(item.longitude);
+    if(Number.isFinite(lat)&&Number.isFinite(lng)){
+      const marker=L.marker([lat,lng]).addTo(map).bindPopup("<strong>"+esc(item.status)+"</strong><br>"+esc(item.location)+"<br>Waste: "+esc(item.wasteType)+"<br>Date: "+esc(item.date)+" "+esc(item.time)+"<br>"+esc(item.observation));
+      mapMarkers.push(marker);
+    }
+  });
+}
+async function renderLogbook(){
+  const all=await evidenceGetAll();
+  const relevant=currentUser?.role==="Owner"?all:all.filter(x=>x.submittedBy===currentUser?.username && x.submittedRole===currentUser?.role);
+  const box=qs("logbookContent");
+  if(!relevant.length){box.innerHTML='<div class="empty">No field observations stored yet.</div>';return}
+  box.innerHTML='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Location</th><th>Status</th><th>Waste type</th><th>Observation</th><th>Submitted by</th><th>Evidence reference</th></tr></thead><tbody>'+
+    relevant.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(x=>`<tr>
+      <td>${esc(x.date)}</td><td>${esc(x.time)}</td><td>${esc(x.location)}</td><td>${esc(x.status)}</td>
+      <td>${esc(x.wasteType)}</td><td>${esc(x.observation)}</td><td>${esc(x.submittedRole)} — ${esc(x.submittedBy)}</td><td>${esc(x.id)}</td>
+    </tr>`).join("")+"</tbody></table></div>";
+}
+function wrapText(doc,text,x,y,maxWidth,lineHeight){
+  const lines=doc.splitTextToSize(String(text||""),maxWidth);
+  doc.text(lines,x,y); return y+lines.length*lineHeight;
+}
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){resolve(null);return}
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+async function generatePDF(){
+  const msg=qs("pdfMsg");msg.textContent="Preparing report...";
+  try{
+    const state=await loadState(), all=await evidenceGetAll();
+    const relevant=currentUser.role==="Owner"?all:all.filter(x=>x.submittedBy===currentUser.username && x.submittedRole===currentUser.role);
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({unit:"mm",format:"a4"});
+    let y=18;
+    doc.setFontSize(18);doc.setTextColor(15,81,50);doc.text("Mangroovy walk",15,y);y+=8;
+    doc.setFontSize(12);doc.setTextColor(30,50,40);doc.text("School Monitoring & Rewards",15,y);y+=8;
+    doc.setFontSize(10);
+    y=wrapText(doc,"School: "+state.school.name+" — "+state.school.address,15,y,180,5);y+=3;
+    y=wrapText(doc,"Generated for: "+currentUser.role+" — "+currentUser.username,15,y,180,5);y+=6;
+    doc.setDrawColor(15,81,50);doc.line(15,y,195,y);y+=7;
+    doc.setFontSize(13);doc.setTextColor(15,81,50);doc.text("Field Observations",15,y);y+=7;
+    doc.setFontSize(9);doc.setTextColor(30,40,35);
+    if(!relevant.length){doc.text("No evidence records were available for this report.",15,y);y+=7}
+    for(const item of relevant){
+      if(y>260){doc.addPage();y=18}
+      doc.setFontSize(10);doc.setTextColor(15,81,50);
+      doc.text((item.evidenceType||"Evidence")+" — "+(item.status||""),15,y);y+=5;
+      doc.setFontSize(8.5);doc.setTextColor(30,40,35);
+      y=wrapText(doc,"Date/Time: "+item.date+" "+item.time+" | Location: "+item.location,15,y,180,4);y+=2;
+      y=wrapText(doc,"Waste type: "+item.wasteType+" | Material: "+item.material+" | Quantity: "+item.quantity,15,y,180,4);y+=2;
+      y=wrapText(doc,"Observation: "+item.observation,15,y,180,4);y+=2;
+      y=wrapText(doc,"Submitted by: "+item.submittedRole+" — "+item.submittedBy+" | Verification: "+(item.verified?"Verified":"Pending"),15,y,180,4);y+=3;
+      if(item.mediaType==="image" && item.file){
+        try{
+          const data=await fileToDataURL(item.file);
+          if(data){
+            const imgW=55, imgH=40;
+            if(y+imgH>278){doc.addPage();y=18}
+            doc.addImage(data,"JPEG",15,y,imgW,imgH,undefined,"FAST");
+            y+=imgH+5;
+          }
+        }catch(_){ /* continue without image */ }
+      } else if(item.mediaType==="video"){
+        y=wrapText(doc,"Video evidence is stored locally in the browser and is referenced in this report.",15,y,180,4);y+=5;
+      }
+    }
+    doc.setFontSize(9);doc.setTextColor(15,81,50);
+    if(y>270){doc.addPage();y=18}
+    doc.text("School points: "+state.points.school+" / Certificate threshold: "+state.settings.certificateThreshold,15,y);
+    doc.save("Mangrove-Watch-Mumbai-Report.pdf");
+    msg.textContent="PDF generated successfully.";
+  }catch(err){msg.textContent="PDF could not be generated: "+err.message}
+}
+async function createEmailDraft(){
+  const all=await evidenceGetAll();
+  const relevant=currentUser.role==="Owner"?all:all.filter(x=>x.submittedBy===currentUser.username && x.submittedRole===currentUser.role);
+  const subject=encodeURIComponent("Mangroovy walk — Field Findings");
+  const body=encodeURIComponent(
+    "Mangroovy walk — School Monitoring & Rewards\n\n"+
+    "School: B M C School, Varsha Nagar, Vikhroli West, Mumbai\n"+
+    "Submitted by: "+currentUser.role+" — "+currentUser.username+"\n"+
+    "Evidence records: "+relevant.length+"\n\n"+
+    relevant.slice(0,15).map(x=>`${x.date} ${x.time} | ${x.location} | ${x.status} | ${x.wasteType}\n${x.observation}`).join("\n\n")
+  );
+  location.href="mailto:?subject="+subject+"&body="+body;
+}
+function bindEvents(){
+  qs("securityLoginBtn").onclick=securityLogin;
+  qs("roleLoginBtn").onclick=roleLogin;
+  document.querySelectorAll(".role-btn").forEach(b=>b.onclick=()=>setRole(b.dataset.role));
+  qs("logoutBtn").onclick=logout;
+  qs("menuOpen").onclick=openMenu;qs("menuClose").onclick=closeMenu;qs("navOverlay").onclick=closeMenu;
+  document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showSection(b.dataset.section));
+  document.querySelectorAll("[data-jump]").forEach(b=>b.onclick=()=>showSection(b.dataset.jump));
+  qs("evidenceType").onchange=toggleCameraInput;
+  qs("evidenceForm").onsubmit=submitEvidence;
+  qs("getLocationBtn").onclick=getLocation;
+  qs("savePointSettings").onclick=savePointSettings;
+  qs("saveCertificateSettings").onclick=saveCertificateSettings;
+  qs("saveAccountsBtn").onclick=saveAccounts;
+  qs("resetPointsBtn").onclick=resetPoints;
+  qs("pdfBtn").onclick=generatePDF;
+  qs("emailBtn").onclick=createEmailDraft;
+  document.addEventListener("click",async e=>{
+    const v=e.target.closest("[data-verify]"),d=e.target.closest("[data-delete]");
+    if(v)await verifyEvidence(v.dataset.verify);
+    if(d)await deleteEvidence(d.dataset.delete);
+  });
+}
+async function boot(){
+  try{
+    await openDB();
+    const state=await loadState();
+    qs("schoolNameText").textContent=state.school.name;
+    qs("schoolAddressText").textContent=state.school.address;
+    qs("workSchool").textContent=state.school.name;
+    const securityAuthenticated=localStorage.getItem("mmw_security_authenticated")==="1";
+    if(securityAuthenticated){
+      qs("securityStep").classList.add("hidden");
+      qs("roleStep").classList.remove("hidden");
+    }
+    const session=sessionStorage.getItem("mmw_session");
+    if(session){
+      try{
+        const parsed=JSON.parse(session);
+        if(["Owner","Teacher","Student"].includes(parsed.role)){
+          const acc=state.accounts[parsed.role];
+          if(acc && acc.username===parsed.username){currentUser=parsed;openApp()}
+        }
+      }catch(_){}
+    }
+    bindEvents();
+    toggleCameraInput();
+  }catch(err){
+    document.querySelector("#securityGate .auth-card").insertAdjacentHTML("beforeend",
+      '<div class="auth-message">Local browser storage could not be initialized: '+esc(err.message)+'</div>');
+  }
+}
+boot();
+
+/* ===== Reference-inspired field features ===== */
+let capturePickerMap=null, capturePickerMarker=null, capturedPhotoFile=null, capturedVideoFile=null;
+
+function mmwProfileKey(){
+  return "mmw_profile_" + (currentUser?.username || "guest");
+}
+function loadProfile(){
+  const p=JSON.parse(localStorage.getItem(mmwProfileKey())||"{}");
+  const set=(id,v)=>{const e=qs(id);if(e)e.value=v||""};
+  set("profileName",p.name||currentUser?.username||"");
+  set("profileClass",p.className||"");
+  set("profileSchool",p.school||"B M C School");
+  set("profileArea",p.area||"Varsha Nagar, Vikhroli West, Mumbai");
+}
+function saveProfile(){
+  const p={
+    name:qs("profileName")?.value.trim(),
+    className:qs("profileClass")?.value.trim(),
+    school:qs("profileSchool")?.value.trim(),
+    area:qs("profileArea")?.value.trim()
+  };
+  localStorage.setItem(mmwProfileKey(),JSON.stringify(p));
+  const n=qs("profileSavedNote"); if(n){n.style.display="block";setTimeout(()=>n.style.display="none",2200)}
+}
+function initCapturePicker(){
+  if(!window.L || !qs("capturePickerMap")) return;
+  if(capturePickerMap){setTimeout(()=>capturePickerMap.invalidateSize(),100);return;}
+  capturePickerMap=L.map("capturePickerMap").setView([19.1085,72.9328],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(capturePickerMap);
+  capturePickerMap.on("click",e=>setPickedLocation(e.latlng.lat,e.latlng.lng));
+}
+function setPickedLocation(lat,lng){
+  if(!capturePickerMap)return;
+  lat=Number(lat);lng=Number(lng);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+  qs("pickedLat").value=lat.toFixed(6);
+  qs("pickedLng").value=lng.toFixed(6);
+  if(capturePickerMarker)capturePickerMarker.remove();
+  capturePickerMarker=L.marker([lat,lng]).addTo(capturePickerMap).bindPopup("<strong>Selected observation point</strong><br>"+lat.toFixed(6)+", "+lng.toFixed(6)).openPopup();
+  capturePickerMap.setView([lat,lng],Math.max(capturePickerMap.getZoom(),15));
+}
+function useCurrentLocation(){
+  if(!navigator.geolocation){alert("Location is not available on this device.");return;}
+  navigator.geolocation.getCurrentPosition(
+    p=>setPickedLocation(p.coords.latitude,p.coords.longitude),
+    ()=>alert("Could not get your location. You can tap the map to choose the observation point."),
+    {enableHighAccuracy:true,timeout:10000,maximumAge:30000}
+  );
+}
+function clearPickedLocation(){
+  if(qs("pickedLat"))qs("pickedLat").value="";
+  if(qs("pickedLng"))qs("pickedLng").value="";
+  if(capturePickerMarker){capturePickerMarker.remove();capturePickerMarker=null}
+}
+function showCapturePreview(file,type){
+  const box=qs("capturePreview"); if(!box)return;
+  const url=URL.createObjectURL(file);
+  box.innerHTML="";
+  const el=document.createElement(type==="image"?"img":"video");
+  el.src=url;
+  if(type==="video"){el.controls=true;el.playsInline=true}
+  box.appendChild(el);
+}
+function setupCameraInputs(){
+  const p=qs("photoCameraInput"),v=qs("videoCameraInput");
+  if(p)p.addEventListener("change",()=>{capturedPhotoFile=p.files?.[0]||null;if(capturedPhotoFile)showCapturePreview(capturedPhotoFile,"image")});
+  if(v)v.addEventListener("change",()=>{capturedVideoFile=v.files?.[0]||null;if(capturedVideoFile)showCapturePreview(capturedVideoFile,"video")});
+  qs("openPhotoCameraBtn")?.addEventListener("click",()=>p?.click());
+  qs("openVideoCameraBtn")?.addEventListener("click",()=>v?.click());
+  qs("useCurrentLocationBtn")?.addEventListener("click",useCurrentLocation);
+  qs("clearPickedLocationBtn")?.addEventListener("click",clearPickedLocation);
+}
+async function saveCameraEvidenceHook(){
+  // Existing evidence-save code remains the authoritative save operation.
+  // These fields are copied into the existing form when available.
+  const lat=qs("pickedLat")?.value, lng=qs("pickedLng")?.value;
+  if(lat && qs("latitude")) qs("latitude").value=lat;
+  if(lng && qs("longitude")) qs("longitude").value=lng;
+}
+
+async function refreshVisits(){
+  const box=qs("visitList"); if(!box)return;
+  const visits=JSON.parse(localStorage.getItem("mmw_field_visits")||"[]");
+  if(!visits.length){box.innerHTML='<p class="muted">No field visits saved yet.</p>';return;}
+  box.innerHTML=visits.slice().reverse().map(v=>`
+    <div class="visit-card">
+      <strong>${esc(v.location||"Field visit")}</strong>
+      <div class="muted">${esc(v.date||"")} ${esc(v.time||"")} · ${esc(v.submittedBy||"")}</div>
+      <p><span class="status-pill">${esc(v.status||"")}</span> · ${esc(v.wasteType||"")}</p>
+      <p>${esc(v.observation||"")}</p>
+      ${v.evidenceRef?`<small>Evidence: ${esc(v.evidenceRef)}</small>`:""}
+    </div>`).join("");
+}
+function addFieldVisit(){
+  const v={
+    date:qs("visitDate")?.value,
+    time:qs("visitTime")?.value,
+    location:qs("visitLocation")?.value.trim(),
+    status:qs("visitStatus")?.value,
+    wasteType:qs("visitWasteType")?.value,
+    observation:qs("visitObservation")?.value.trim(),
+    evidenceRef:qs("visitEvidenceRef")?.value.trim(),
+    submittedBy:currentUser?.username||""
+  };
+  if(!v.date||!v.location||!v.observation){alert("Please enter date, location and observation.");return}
+  const arr=JSON.parse(localStorage.getItem("mmw_field_visits")||"[]");
+  arr.push(v);localStorage.setItem("mmw_field_visits",JSON.stringify(arr));
+  ["visitLocation","visitObservation","visitEvidenceRef"].forEach(id=>{if(qs(id))qs(id).value=""});
+  refreshVisits();
+}
+function initFieldTools(){
+  const now=new Date();
+  if(qs("visitDate")&&!qs("visitDate").value)qs("visitDate").value=now.toISOString().slice(0,10);
+  if(qs("visitTime")&&!qs("visitTime").value)qs("visitTime").value=now.toTimeString().slice(0,5);
+  qs("addVisitBtn")?.addEventListener("click",addFieldVisit);
+  qs("saveProfileBtn")?.addEventListener("click",saveProfile);
+  qs("loadProfileBtn")?.addEventListener("click",loadProfile);
+  loadProfile();refreshVisits();setupCameraInputs();
+}
+document.addEventListener("DOMContentLoaded",()=>{setupStatusCheckboxes();});
+document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>{initCapturePicker();initFieldTools()},500));
+
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-section]");
+  if(!b)return;
+  const id=b.getAttribute("data-section");
+  if(id==="capture")setTimeout(initCapturePicker,150);
+  if(id==="profile")setTimeout(loadProfile,100);
+  if(id==="fieldLogbook")setTimeout(refreshVisits,100);
+});
+
+
+function setupMainMapControls(){
+  qs("mapMumbaiBtn")?.addEventListener("click",()=>{
+    if(window.map && typeof map.setView==="function") map.setView([19.0760,72.8777],11);
+  });
+  qs("mapVikhroliBtn")?.addEventListener("click",()=>{
+    if(window.map && typeof map.setView==="function") map.setView([19.1085,72.9328],14);
+  });
+  qs("mapLocateBtn")?.addEventListener("click",()=>{
+    if(!navigator.geolocation){alert("Location is not available on this device.");return}
+    navigator.geolocation.getCurrentPosition(
+      p=>{if(window.map)map.setView([p.coords.latitude,p.coords.longitude],16)},
+      ()=>alert("Could not get your location. You can continue using the map manually."),
+      {enableHighAccuracy:true,timeout:10000,maximumAge:30000}
+    );
+  });
+}
+document.addEventListener("DOMContentLoaded",()=>setTimeout(setupMainMapControls,700));
+
+</script>
+</body>
+</html>
